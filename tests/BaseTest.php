@@ -17,15 +17,15 @@
 
 use GuzzleHttp\ClientInterface;
 use Symfony\Component\DomCrawler\Crawler;
-use Stash\Driver\FileSystem;
-use Stash\Pool;
+use League\Flysystem\Adapter\Local;
+use League\Flysystem\Filesystem;
+use Cache\Adapter\Filesystem\FilesystemCachePool;
+use PHPUnit\Framework\TestCase;
 
-class BaseTest extends PHPUnit_Framework_TestCase
+class BaseTest extends TestCase
 {
   private $key;
   private $client;
-  private $memcacheHost;
-  private $memcachePort;
   protected $testDir = __DIR__;
 
   public function getClient()
@@ -39,8 +39,11 @@ class BaseTest extends PHPUnit_Framework_TestCase
 
   public function getCache($path = null)
   {
-    $path = $path ?: sys_get_temp_dir().'/google-api-php-client-tests';
-    return new Pool(new FileSystem(['path' => $path]));
+    $path = $path ?: sys_get_temp_dir().'/google-api-php-client-tests/';
+    $filesystemAdapter = new Local($path);
+    $filesystem        = new Filesystem($filesystemAdapter);
+
+    return new FilesystemCachePool($filesystem);
   }
 
   private function createClient()
@@ -81,7 +84,9 @@ class BaseTest extends PHPUnit_Framework_TestCase
     list($clientId, $clientSecret) = $this->getClientIdAndSecret();
     $client->setClientId($clientId);
     $client->setClientSecret($clientSecret);
-    $client->setCache($this->getCache());
+    if (version_compare(PHP_VERSION, '5.5', '>=')) {
+      $client->setCache($this->getCache());
+    }
 
     return $client;
   }
@@ -118,7 +123,7 @@ class BaseTest extends PHPUnit_Framework_TestCase
     $client->setRedirectUri("urn:ietf:wg:oauth:2.0:oob");
     $client->setConfig('access_type', 'offline');
     $authUrl = $client->createAuthUrl();
-
+    echo "\nGo to: $authUrl\n";
     echo "\nPlease enter the auth code:\n";
     ob_flush();
     `open '$authUrl'`;
@@ -135,8 +140,8 @@ class BaseTest extends PHPUnit_Framework_TestCase
 
   private function getClientIdAndSecret()
   {
-    $clientId = getenv('GCLOUD_CLIENT_ID') ? getenv('GCLOUD_CLIENT_ID') : null;
-    $clientSecret = getenv('GCLOUD_CLIENT_SECRET') ? getenv('GCLOUD_CLIENT_SECRET') : null;
+    $clientId = getenv('GCLOUD_CLIENT_ID') ?: null;
+    $clientSecret = getenv('GCLOUD_CLIENT_SECRET') ?: null;
 
     return array($clientId, $clientSecret);
   }
@@ -178,7 +183,7 @@ class BaseTest extends PHPUnit_Framework_TestCase
 
   public function loadKey()
   {
-    if (file_exists($f = dirname(__FILE__) . DIRECTORY_SEPARATOR . '.apiKey')) {
+    if (file_exists($f = __DIR__ . DIRECTORY_SEPARATOR . '.apiKey')) {
       return file_get_contents($f);
     }
   }
@@ -221,6 +226,13 @@ class BaseTest extends PHPUnit_Framework_TestCase
   {
     if (!$this->isGuzzle6()) {
       $this->markTestSkipped('Guzzle 6 only');
+    }
+  }
+
+  public function onlyPhp55AndAbove()
+  {
+    if (version_compare(PHP_VERSION, '5.5', '<')) {
+      $this->markTestSkipped('PHP 5.5 and above only');
     }
   }
 

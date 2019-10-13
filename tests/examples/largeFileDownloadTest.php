@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,33 +18,33 @@
  * under the License.
  */
 
-class examples_simpleFileUploadTest extends BaseTest
+class examples_largeFileDownloadTest extends BaseTest
 {
-  public function testSimpleFileUploadNoToken()
+  public function testSimpleFileDownloadNoToken()
   {
     $this->checkServiceAccountCredentials();
 
-    $crawler = $this->loadExample('simple-file-upload.php');
+    $crawler = $this->loadExample('large-file-download.php');
 
     $nodes = $crawler->filter('h1');
     $this->assertCount(1, $nodes);
-    $this->assertEquals('File Upload - Uploading a simple file', $nodes->first()->text());
+    $this->assertEquals('File Download - Downloading a large file', $nodes->first()->text());
 
     $nodes = $crawler->filter('a.login');
     $this->assertCount(1, $nodes);
     $this->assertEquals('Connect Me!', $nodes->first()->text());
   }
 
-  public function testSimpleFileUploadWithToken()
+  public function testSimpleFileDownloadWithToken()
   {
     $this->checkToken();
 
     global $_SESSION;
     $_SESSION['upload_token'] = $this->getClient()->getAccessToken();
 
-    $crawler = $this->loadExample('simple-file-upload.php');
+    $crawler = $this->loadExample('large-file-download.php');
 
-    $buttonText = 'Click here to upload two small (1MB) test files';
+    $buttonText = 'Click here to download a large (20MB) test file';
     $nodes = $crawler->filter('input');
     $this->assertCount(1, $nodes);
     $this->assertEquals($buttonText, $nodes->first()->attr('value'));
